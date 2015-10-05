@@ -100,26 +100,44 @@ def update(csvtext, drug_dict):
     return drug_dict
 
 
-def return_highest(drug_dict):
+def return_highest(drug_dict, percent, price):
     highest = []
     for drug in drug_dict:
-        if drug_dict[drug].change > 3 and drug_dict[drug].highest[1] > 100:
+        if drug_dict[drug].change > percent and drug_dict[drug].highest[1] > price:
             highest.append(drug_dict[drug])
         else:
             pass
     return highest
 
 
-def test():
+def here_we_go(percent, price):
     test1 = "NADAC 20150930"
     test2 = "NADAC 20131128"
     drugs = builder(test1)
     drugs = update(test2, drugs)
-    drugs = return_highest(drugs)
+    drugs = return_highest(drugs, percent, price)
     for drug in drugs:
         Drug.printer(drug)
         print
 
 
+def remove_stuff(str):
+    numstr = ""
+    for character in str:
+        if character.isdigit():
+            numstr += character
+        else:
+            pass
+    return numstr
+
+
 if __name__ == "__main__":
-    test()
+    print "Let's look at some drug prices."
+    print "There are ~22,000 drugs in Medicaid's database, so we need to narrow it down."
+    print "Enter a minimum percent increase you'd like to see, and a minimum current price."
+    raw_percent = raw_input("MINIMUM PERCENT INCREASE: ")
+    raw_price = raw_input("MINIMUM CURRENT PRICE: ")
+    print
+    percent = int(remove_stuff(raw_percent)) / 100
+    price = int(remove_stuff(raw_price))
+    here_we_go(percent, price)
