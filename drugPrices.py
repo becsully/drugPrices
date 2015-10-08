@@ -5,7 +5,7 @@ from pprint import pprint
 
 
 class Drug(object):
-    def __init__(self, name, fda_id, unit, otc, b_or_g):
+    def __init__(self, name, fda_id, unit, otc, b_or_g, source):
         self.name = name
         self.id = fda_id
         self.prices = {}
@@ -17,10 +17,19 @@ class Drug(object):
         self.current = ("19000101", 0.0)
         self.oldest = ("20500101", 0.0)
         self.change = 0
+        self.vendor = "(None listed)"
+        self.package = "(None listed)"
+        self.source = source
 
     def add_price(self, datestr, price): #date str formatted YYYYMMDD, float
         self.prices[datestr] = float(price)
         Drug.update_prices(self)
+
+    def add_vendor(self, vendor):
+        self.vendor = vendor
+
+    def add_package(self, package):
+        self.package = package
 
     def update_prices(self):
         for date in self.prices:
@@ -34,15 +43,24 @@ class Drug(object):
             if self.prices[date] > self.highest[1]:
                 highest = self.prices[date]
                 self.highest = (date, highest)
-        self.change = ( self.current[1] / self.oldest[1] ) - 1
+        try:
+            self.change = ( self.current[1] / self.oldest[1] ) - 1
+        except ZeroDivisionError:
+            pass
 
     def printer(self):
         print "Name: " + self.name
         print "FDA ID: " + self.id
+        print "Vendor: " + self.vendor
+        if self.source == "VA":
+            print "NOTE: THIS DRUG INFORMATION IS FROM THE VETERANS' AFFAIRS CONTRACT.\nTHESE ARE NOT RETAIL PRICES."
         print "Current Price: $%.2f" % float(self.current[1])
-        print "Lowest Price: $%.2f" % float(self.lowest[1])
+        if self.change > 0:
+            print "Lowest Price: $%.2f" % float(self.lowest[1])
+        else:
+            print "Highest Price: $%.2f" % float(self.highest[1])
         print "Change by percent: %.2f%%" % (self.change * 100)
-        pprint(self.prices)
+        # pprint(self.prices)
 
 
 def builder(csvtext): #csvtext is a str filename
@@ -61,7 +79,7 @@ def builder(csvtext): #csvtext is a str filename
                     drug[headers[i]] = line[i]
                 price = drug["Price"]
                 this_drug = Drug(drug["Name"], drug["FDA ID"], drug["Pricing Unit"],
-                                    drug["OTC or Not"], drug["Brand or Generic"])
+                                    drug["OTC or Not"], drug["Brand or Generic"], "NADAC")
                 Drug.add_price(this_drug, date, price)
                 drug_dict[drug["FDA ID"]] = this_drug
             count += 1
@@ -69,9 +87,33 @@ def builder(csvtext): #csvtext is a str filename
     return drug_dict
 
 
-def create_new(drug_dict):
-    # TODO potentially -- write a separate function outside of builder() to reuse as much as possible
-    pass
+def consult_va(csvtext, drug_dict):
+    count = 1
+    date = csvtext[-8:]
+    headers = ["Contract Number","Vendor","Start Date","Stop Date","FDA ID","SubItemIdentifier","PackageDesc",
+               "Generic Name","TradeName","VAClass","Covered", "Prime Vendor","Price","PriceStart","PriceType"]
+    with open(csvtext+".csv", "r") as drugcsv:
+        drugreader = csv.reader(drugcsv)
+        for line in drugreader:
+            if count == 1:
+                pass
+            else:
+                drug = {}
+                for i in range(len(headers)):
+                    if headers[i] == "FDA ID":
+                        drug["FDA ID"] = line[i].translate(None,"-")
+                    else:
+                        drug[headers[i]] = line[i]
+                if drug["FDA ID"] in drug_dict:
+                    Drug.add_vendor(drug_dict[drug["FDA ID"]], drug["Vendor"])
+                else:
+                    this_drug = Drug(drug["TradeName"], drug["FDA ID"], drug["PackageDesc"],
+                                     "(Not listed)", "(Not Listed)", "VA")
+                    Drug.add_price(this_drug, date, drug["Price"])
+                    drug_dict[drug["FDA ID"]] = this_drug
+            count += 1
+        drugcsv.close()
+    return drug_dict
 
 
 def update(csvtext, drug_dict):
@@ -92,7 +134,7 @@ def update(csvtext, drug_dict):
                     Drug.add_price(drug_dict[drug["FDA ID"]], date, price)
                 else:
                     this_drug = Drug(drug["Name"], drug["FDA ID"], drug["Pricing Unit"],
-                                     drug["OTC or Not"], drug["Brand or Generic"])
+                                     drug["OTC or Not"], drug["Brand or Generic"], "NADAC")
                     Drug.add_price(this_drug, date, price)
                     drug_dict[drug["FDA ID"]] = this_drug
             count += 1
@@ -100,44 +142,75 @@ def update(csvtext, drug_dict):
     return drug_dict
 
 
-def return_highest(drug_dict, percent, price):
+def return_highest(drug_dict, min_percent, min_price, max_percent, max_price):
     highest = []
     for drug in drug_dict:
-        if drug_dict[drug].change > percent and drug_dict[drug].highest[1] > price:
+        if (min_percent <= drug_dict[drug].change <= max_percent and
+            min_price <= drug_dict[drug].current[1] <= max_price):
             highest.append(drug_dict[drug])
         else:
             pass
     return highest
 
 
-def here_we_go(percent, price):
-    test1 = "NADAC 20150930"
-    test2 = "NADAC 20131128"
-    drugs = builder(test1)
-    drugs = update(test2, drugs)
-    drugs = return_highest(drugs, percent, price)
+def here_we_go(min_percent, min_price, max_percent, max_price):
+    sept2015 = "NADAC 20150930"
+    nov2013 = "NADAC 20131128"
+    va_text = "fssPharmPrices20151001"
+    drugs = builder(nov2013)
+    drugs = update(sept2015, drugs)
+    drugs = consult_va(va_text, drugs)
+    drugs = return_highest(drugs, min_percent, min_price, max_percent, max_price)
     for drug in drugs:
         Drug.printer(drug)
         print
+    print "%i RESULTS FOUND" % len(drugs)
 
 
 def remove_stuff(str):
     numstr = ""
     for character in str:
-        if character.isdigit():
+        if character.isdigit() or character == "." or character == "-":
             numstr += character
         else:
             pass
     return numstr
 
 
+def test():
+    here_we_go(1,50,100000,1000000)
+
+
 if __name__ == "__main__":
+    # test()
     print "Let's look at some drug prices."
     print "There are ~22,000 drugs in Medicaid's database, so we need to narrow it down."
-    print "Enter a minimum percent increase you'd like to see, and a minimum current price."
-    raw_percent = raw_input("MINIMUM PERCENT INCREASE: ")
-    raw_price = raw_input("MINIMUM CURRENT PRICE: ")
-    print
-    percent = int(remove_stuff(raw_percent)) / 100
-    price = int(remove_stuff(raw_price))
-    here_we_go(percent, price)
+    print "Enter minimum and maximum current price and percent increase in two years."
+    print "You can just hit enter if you don't want a minimum or maximum."
+    keep_going = "y"
+    while keep_going == "y":
+        raw_min_price = raw_input("MINIMUM CURRENT PRICE: ")
+        raw_min_percent = raw_input("MINIMUM PERCENT INCREASE: ")
+        raw_max_price = raw_input("MAXIMUM CURRENT PRICE: ")
+        raw_max_percent = raw_input("MAXIMUM PERCENT INCREASE: ")
+        print
+        if raw_min_percent:
+            min_percent = float(remove_stuff(raw_min_percent)) / 100
+        else:
+            min_percent = -10000000
+        if raw_min_price:
+            min_price = float(remove_stuff(raw_min_price))
+        else:
+            min_price = 0
+        if raw_max_percent:
+            max_percent = float(remove_stuff(raw_max_percent)) / 100
+        else:
+            max_percent = 1000000
+        if raw_max_price:
+            max_price = float(remove_stuff(raw_max_price))
+        else:
+            max_price = 100000000
+        here_we_go(min_percent, min_price, max_percent, max_price)
+        print
+        keep_going = (raw_input("RUN ANOTHER SEARCH? Y/N" )).lower()
+        print
