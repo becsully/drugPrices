@@ -153,7 +153,31 @@ def return_highest(drug_dict, min_percent, min_price, max_percent, max_price):
     return highest
 
 
-def here_we_go(min_percent, min_price, max_percent, max_price):
+def return_match(drug_dict, search_term):
+    matches = []
+    for drug in drug_dict:
+        if search_term.upper() in (drug_dict[drug].name).upper() and drug_dict[drug].change != 0:
+            matches.append(drug_dict[drug])
+        else:
+            pass
+    return matches
+	
+	
+def search_by_str(search):
+    sept2015 = "NADAC 20150930"
+    nov2013 = "NADAC 20131128"
+    va_text = "fssPharmPrices20151001"
+    drugs = builder(nov2013)
+    drugs = update(sept2015, drugs)
+    drugs = consult_va(va_text, drugs)
+    drugs = return_match(drugs, search)
+    for drug in drugs:
+        Drug.printer(drug)
+        print
+    print "%i RESULTS FOUND" % len(drugs)
+
+
+def search_by_num(min_percent, min_price, max_percent, max_price):
     sept2015 = "NADAC 20150930"
     nov2013 = "NADAC 20131128"
     va_text = "fssPharmPrices20151001"
@@ -178,39 +202,44 @@ def remove_stuff(str):
 
 
 def test():
-    here_we_go(1,50,100000,1000000)
+    search_by_num(1,50,100000,1000000)
 
 
 if __name__ == "__main__":
     # test()
     print "Let's look at some drug prices."
     print "There are ~22,000 drugs in Medicaid's database, so we need to narrow it down."
-    print "Enter minimum and maximum current price and percent increase in two years."
-    print "You can just hit enter if you don't want a minimum or maximum."
     keep_going = "y"
     while keep_going == "y":
-        raw_min_price = raw_input("MINIMUM CURRENT PRICE: ")
-        raw_min_percent = raw_input("MINIMUM PERCENT INCREASE: ")
-        raw_max_price = raw_input("MAXIMUM CURRENT PRICE: ")
-        raw_max_percent = raw_input("MAXIMUM PERCENT INCREASE: ")
+        choice = raw_input("Search by (1) drug name or (2) min/max price/%% change. ")
+        if choice == "1":
+            search = raw_input("Enter your search term: ")
+            search_by_str(search)
+        elif choice == "2":
+            print "Enter minimum and maximum current price and percent increase in two years."
+            print "You can just hit enter if you don't want a minimum or maximum."
+            raw_min_price = raw_input("MINIMUM CURRENT PRICE: ")
+            raw_min_percent = raw_input("MINIMUM PERCENT INCREASE: ")
+            raw_max_price = raw_input("MAXIMUM CURRENT PRICE: ")
+            raw_max_percent = raw_input("MAXIMUM PERCENT INCREASE: ")
+            print
+            if raw_min_percent:
+                min_percent = float(remove_stuff(raw_min_percent)) / 100
+            else:
+                min_percent = -10000000
+            if raw_min_price:
+                min_price = float(remove_stuff(raw_min_price))
+            else:
+                min_price = 0
+            if raw_max_percent:
+                max_percent = float(remove_stuff(raw_max_percent)) / 100
+            else:
+                max_percent = 1000000
+            if raw_max_price:
+                max_price = float(remove_stuff(raw_max_price))
+            else:
+                max_price = 100000000
+            search_by_num(min_percent, min_price, max_percent, max_price)
         print
-        if raw_min_percent:
-            min_percent = float(remove_stuff(raw_min_percent)) / 100
-        else:
-            min_percent = -10000000
-        if raw_min_price:
-            min_price = float(remove_stuff(raw_min_price))
-        else:
-            min_price = 0
-        if raw_max_percent:
-            max_percent = float(remove_stuff(raw_max_percent)) / 100
-        else:
-            max_percent = 1000000
-        if raw_max_price:
-            max_price = float(remove_stuff(raw_max_price))
-        else:
-            max_price = 100000000
-        here_we_go(min_percent, min_price, max_percent, max_price)
-        print
-        keep_going = (raw_input("RUN ANOTHER SEARCH? Y/N" )).lower()
+        keep_going = (raw_input("RUN ANOTHER SEARCH? Y/N ")).lower()
         print
