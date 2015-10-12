@@ -13,7 +13,7 @@ prices and price changes fall within your given minimums and maximums.
 
 Sample output: 
 
-
+```
 Let's look at some drug prices.
 There are ~22,000 drugs in Medicaid's database, so we need to narrow it down.
 Search by (1) drug name or (2) min/max price/%% change. 2
@@ -46,3 +46,4 @@ Change by percent: 575.00%
 2 RESULTS FOUND
 
 RUN ANOTHER SEARCH? Y/N 
+```
