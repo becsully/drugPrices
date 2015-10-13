@@ -17,7 +17,6 @@ Sample output:
 Let's look at some drug prices.
 There are ~22,000 drugs in Medicaid's database, so we need to narrow it down.
 Search by (1) drug name or (2) min/max price/%% change. 2
-
 Enter minimum and maximum current price and percent increase in two years.
 You can just hit enter if you don't want a minimum or maximum.
 MINIMUM CURRENT PRICE: $50
@@ -25,23 +24,25 @@ MINIMUM PERCENT INCREASE: 500%
 MAXIMUM CURRENT PRICE: 
 MAXIMUM PERCENT INCREASE: 
 
-Proprietary name: CARAC CREAM
-Scientific name: (none listed)
-NDC: 00066715030
-Manufacturer: (None listed)
-B/G: Brand
-Current Price: $81.53
-Lowest Price: $13.33
-Change by percent: 511.48%
-
 Proprietary name: TASMAR 100 MG TABLET
-Scientific name: (none listed)
+Scientific name: Tolcapone
 NDC: 00187093801
-Manufacturer: (None listed)
+What it is: Catechol O-Methyltransferase Inhibitors [MoA],Catechol-O-Methyltransferase Inhibitor [EPC]
+Manufacturer: Valeant Pharmaceuticals North America LLC
 B/G: Brand
 Current Price: $105.98
 Lowest Price: $15.70
 Change by percent: 575.00%
+
+Proprietary name: CARAC CREAM
+Scientific name: fluorouracil
+NDC: 00066715030
+What it is: Nucleic Acid Synthesis Inhibitors [MoA],Nucleoside Metabolic Inhibitor [EPC]
+Manufacturer: Dermik Laboratories
+B/G: Brand
+Current Price: $81.53
+Lowest Price: $13.33
+Change by percent: 511.48%
 
 2 RESULTS FOUND
 
