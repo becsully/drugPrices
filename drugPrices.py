@@ -29,6 +29,7 @@ class Drug(object):
         self.vendor = "(None listed)"
         self.package = "(None listed)"
         self.source = source
+        self.desc = ""
 
     def add_price(self, datestr, price): #datestr formatted YYYYMMDD, float
         self.prices[datestr] = float(price)
@@ -39,6 +40,9 @@ class Drug(object):
 
     def add_sci_name(self, name):
         self.scientific_name = name
+
+    def add_desc(self, desc):
+        self.desc = desc
 
     def add_package(self, package):
         self.package = package
@@ -64,6 +68,7 @@ class Drug(object):
         print "Proprietary name: " + self.name
         print "Scientific name: " + self.scientific_name
         print "NDC: " + self.id
+        print "What it is: " + self.desc
         print "Manufacturer: " + self.vendor
         if self.source == "VA":
             print "NOTE: THIS DRUG INFORMATION IS FROM THE VETERANS' AFFAIRS CONTRACT.\nTHESE ARE NOT RETAIL PRICES."
@@ -107,11 +112,22 @@ def builder(csvtext): #csvtext is a str filename
     return drug_dict
 
 
-def add_vendors(drug_dict):
-    # this will eventually cross-check NDCs with the FDA's official database
-    # as of 10/11/15, still a little wonky
+def multiple_results(drugFDA, choices_list):    # FOR TESTING
+                                                # sometimes the simple "if 8-digit-NDC in 11-digit-NDC" search
+                                                # returns more than one result. this function prints out the results.
+                                                # drugFDA is the dict with FDA info
+                                                # choices_list is a list of Drug objects that potentially match
+    findings = []
+    nameFDA = (drugFDA["PROPRIETARYNAME"].split(" "))[0]
+    for choice in choices_list:
+        if nameFDA.lower() in (choice.name).lower():
+            findings.append(choice)
+    return findings
 
-    name_file = "test FDANDCs.csv"
+
+def add_FDA_info(drug_dict):     # this function supplies drug and vendor names via NDCs from the FDA's official database
+
+    name_file = "FDANDCs.csv"
     headers = ["PRODUCTID", "PRODUCTNDC", "PRODUCTTYPENAME", "PROPRIETARYNAME", "PROPRIETARYNAMESUFFIX",
                "NONPROPRIETARYNAME", "DOSAGEFORMNAME", "ROUTENAME", "STARTMARKETINGDATE", "ENDMARKETINGDATE",
                "MARKETINGCATEGORYNAME", "APPLICATIONNUMBER", "LABELERNAME", "SUBSTANCENAME",
@@ -130,26 +146,34 @@ def add_vendors(drug_dict):
                         drug["NDC"] = line[i].translate(None,"-")
                     else:
                         drug[headers[i]] = line[i]
-                print "Looking for NDC " + drug["NDC"] + "..."
+                # print "Looking for NDC " + drug["NDC"] + "..."
                 findings = [value for key, value in drug_dict.items() if drug["NDC"] in key]
                 if len(findings) == 1:
                     this_drug = findings[0]
                     Drug.add_vendor(this_drug, drug["LABELERNAME"])
                     Drug.add_sci_name(this_drug, drug["NONPROPRIETARYNAME"])
+                    Drug.add_desc(this_drug, drug["PHARM_CLASSES"])
+                elif len(findings) == 0:
+                    pass
                 else:
-                    print "ERROR: found " + str(len(findings)) + " results!"
-                    pass    # BECAUSE THE FDA NDCS ARE ONLY EIGHT DIGITS LONG, THIS SEARCH OFTEN RETURNS 2+ RESULTS.
+                    findings = multiple_results(drug, findings)
+                    for finding in findings:
+                        Drug.add_vendor(finding, drug["LABELERNAME"])
+                        Drug.add_sci_name(finding, drug["NONPROPRIETARYNAME"])
+                        Drug.add_desc(finding, drug["PHARM_CLASSES"])
+
+                            # BECAUSE THE FDA NDCS ARE ONLY EIGHT DIGITS LONG, THIS SEARCH OFTEN RETURNS 2+ RESULTS.
                             # TODO: write a function to check other info to figure out which is the correct one.
                             # or, worst-case scenario, prompt user to choose which looks right, maybe?
-                for finding in findings:
-                    results[drug["NDC"]] = finding
+                #for finding in findings:
+                #    results[drug["NDC"]] = finding
             count += 1
-    print str(len(results)) + " results found...."
+    """print str(len(results)) + " results found...."
     print
     for result in sorted(results):
         print "Search ID " + result
         Drug.printer(results[result])
-        print
+        print"""
     return drug_dict
 
 
@@ -185,7 +209,8 @@ def consult_va(csvtext, drug_dict):
 def update(csvtext, drug_dict):
     date = csvtext[-8:]
     count = 1
-    headers = ["Name","NDC","Price","Effective date","Pricing Unit","Pharmacy Type","OTC or Not","Explanation Code","Brand or Generic"]
+    headers = ["Name","NDC", "Price", "Effective date", "Pricing Unit", "Pharmacy Type",
+               "OTC or Not", "Explanation Code", "Brand or Generic"]
     with open(csvtext+".csv", "r") as drugcsv:
         drugreader = csv.reader(drugcsv)
         for line in drugreader:
@@ -209,21 +234,21 @@ def update(csvtext, drug_dict):
 
 
 def return_highest(drug_dict, min_percent, min_price, max_percent, max_price):
-    highest = []
+    highest = {}
     for drug in drug_dict:
         if (min_percent <= drug_dict[drug].change <= max_percent and
             min_price <= drug_dict[drug].current[1] <= max_price):
-            highest.append(drug_dict[drug])
+            highest[drug] = drug_dict[drug]
         else:
             pass
     return highest
 
 
 def return_match(drug_dict, search_term):
-    matches = []
+    matches = {}
     for drug in drug_dict:
         if search_term.upper() in (drug_dict[drug].name).upper() and drug_dict[drug].change != 0:
-            matches.append(drug_dict[drug])
+            matches[drug] = drug_dict[drug]
         else:
             pass
     return matches
@@ -232,10 +257,9 @@ def return_match(drug_dict, search_term):
 def start():
     sept2015 = "NADAC 20150930"
     nov2013 = "NADAC 20131128"
-    va_text = "fssPharmPrices20151001"
+    #va_text = "fssPharmPrices20151001"
     drugs = builder(nov2013)
     drugs = update(sept2015, drugs)
-    #drugs = consult_va(va_text, drugs)
     return drugs
 
 
@@ -243,8 +267,9 @@ def search_by_str():
     search = raw_input("Enter your search term: ")
     drugs = start()
     drugs = return_match(drugs, search)
+    drugs = add_FDA_info(drugs)
     for drug in drugs:
-        Drug.printer(drug)
+        Drug.printer(drugs[drug])
         print
     print "%i RESULTS FOUND" % len(drugs)
 
@@ -275,8 +300,9 @@ def search_by_num():  #
         max_price = 100000000
     drugs = start()
     drugs = return_highest(drugs, min_percent, min_price, max_percent, max_price)
+    drugs = add_FDA_info(drugs)
     for drug in drugs:
-        Drug.printer(drug)
+        Drug.printer(drugs[drug])
         print
     print "%i RESULTS FOUND" % len(drugs)
 
@@ -293,7 +319,6 @@ def remove_stuff(str):  # removes non-number characters from the main() raw_inpu
 
 def test():
     drugs = start()
-    add_vendors(drugs)
 
 
 if __name__ == "__main__":
