@@ -1,12 +1,16 @@
 # drugPrices
 a script to compare prescription drug prices
 
-Prescription drugs are getting more expensive at a rate much faster than inflation. 
-This script looks at pricing data from the Centers of Medicare and Medicaid Services and
-shows how those prices have changed from 2013 to today. 
+Prescription drugs are getting more expensive. And it's happening much, much faster than 
+inflation. This script looks at the average prices that pharmacies are paying to acquire 
+the drugs we buy, and shows how those prices have changed from 2013 to today. (The data
+comes from the Center for Medicare and Medicaid Services.)
 
-It's a work in progress, but the basic searches run on any computer with basic Python 2.7. 
+A basic version of the search will run on any computer with Python 2.7. 
 (The only module needed to run the basic search is csv, which is included in Python 2.3+.)
+
+The bigger version will let users draw graphs of the results to pinpoint how and when
+prices increased. 
 
 Download the repo and run drugPrices.py to search by a drug's name, or to find all drugs whose
 prices and price changes fall within your given minimums and maximums. 
