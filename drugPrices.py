@@ -1,7 +1,11 @@
 from __future__ import division
 import csv
-import time
+import datetime
 from pprint import pprint
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import numpy as np
+from matplotlib.font_manager import FontProperties
 
 
 class Drug(object):
@@ -31,7 +35,7 @@ class Drug(object):
         self.source = source
         self.desc = ""
 
-    def add_price(self, datestr, price): #datestr formatted YYYYMMDD, float
+    def add_price(self, datestr, price): #datestr formatted YYYYMMDD, price formatted as str
         self.prices[datestr] = float(price)
         Drug.update_prices(self)
 
@@ -85,7 +89,8 @@ class Drug(object):
         else:
             print "Highest Price: $%.2f" % float(self.highest[1])
         print "Change by percent: %.2f%%" % (self.change * 100)
-        # pprint(self.prices)
+        #print "Prices: ",
+        #pprint(self.prices)
 
 
 def builder(csvtext): #csvtext is a str filename
@@ -144,10 +149,13 @@ def add_FDA_info(drug_dict):     # this function supplies drug and vendor names 
                 for i in range(len(headers)):
                     if headers [i] == "PRODUCTNDC":
                         drug["NDC"] = line[i].translate(None,"-")
+                        templist = line[i].split("-")
+                        templist[0] = templist[0] + "0"
+                        drug["NDC2"] = "".join(templist)
                     else:
                         drug[headers[i]] = line[i]
                 # print "Looking for NDC " + drug["NDC"] + "..."
-                findings = [value for key, value in drug_dict.items() if drug["NDC"] in key]
+                findings = [value for key, value in drug_dict.items() if ( drug["NDC"] in key ) or ( drug["NDC2"] in key )]
                 if len(findings) == 1:
                     this_drug = findings[0]
                     Drug.add_vendor(this_drug, drug["LABELERNAME"])
@@ -233,6 +241,30 @@ def update(csvtext, drug_dict):
     return drug_dict
 
 
+def add_prices(csvtext, drug_dict):
+    date = csvtext[-8:]
+    count = 1
+    headers = ["Name","NDC", "Price", "Effective date", "Pricing Unit", "Pharmacy Type",
+               "OTC or Not", "Explanation Code", "Brand or Generic"]
+    with open(csvtext+".csv", "r") as drugcsv:
+        drugreader = csv.reader(drugcsv)
+        for line in drugreader:
+            if count < 5:
+                pass
+            else:
+                drug = {}
+                for i in range(len(headers)):
+                    drug[headers[i]] = line[i]
+                price = drug["Price"]
+                if drug["NDC"] in drug_dict:
+                    Drug.add_price(drug_dict[drug["NDC"]], date, price)
+                else:
+                    pass
+            count += 1
+        drugcsv.close()
+    return drug_dict
+
+
 def return_highest(drug_dict, min_percent, min_price, max_percent, max_price):
     highest = {}
     for drug in drug_dict:
@@ -255,23 +287,89 @@ def return_match(drug_dict, search_term):
 
 
 def start():
-    sept2015 = "NADAC 20150930"
-    nov2013 = "NADAC 20131128"
+    latest = "nadac/NADAC 20151111"
+    middle = "nadac/NADAC 20141119"
+    earliest = "nadac/NADAC 20131128"
     #va_text = "fssPharmPrices20151001"
-    drugs = builder(nov2013)
-    drugs = update(sept2015, drugs)
+    drugs = builder(earliest)
+    drugs = update(middle, drugs)
+    drugs = update(latest, drugs)
     return drugs
+
+
+def fill_in(drugs):
+    date_list = ["20131204","20131211","20131218","20131225","20140101","20140108","20140115","20140122","20140129",
+                 "20140205","20140212","20140219","20140226","20140305","20140312","20140319","20140326","20140402",
+                 "20140409","20140416","20140423","20140430","20140507","20140514","20140521","20140528","20140604",
+                 "20140611","20140618","20140625","20140702","20140709","20140716","20140723","20140730","20140806",
+                 "20140813","20140820","20140827","20140903","20140910","20140917","20140924","20141001","20141008",
+                 "20141015","20141022","20141029","20141105","20141112","20141119","20141126","20141203","20141210",
+                 "20141217","20141224","20141231","20150107","20150114","20150121","20150128","20150204","20150211",
+                 "20150218","20150225","20150304","20150311","20150318","20150325","20150401","20150415","20150422",
+                 "20150429","20150506","20150513","20150520","20150527","20150603","20150610","20150617","20150624",
+                 "20150701","20150708","20150715","20150722","20150729","20150805","20150812","20150819","20150826",
+                 "20150902","20150909","20150916","20150923","20150930","20151007","20151014","20151021","20151028",
+                 "20151104","20151111"]
+    for date in date_list:
+        print ".",
+        drugs = add_prices("nadac/NADAC " + date, drugs)
+    print
+    return drugs
+
+
+def draw_graph(drugs):
+    x = []
+    y = []
+    for k in sorted(drugs.prices):
+        date = datetime.datetime.strptime(k,"%Y%m%d")
+        x.append(date)
+        y.append(drugs.prices[k])
+    print x
+    print y
+    dates = mdates.date2num(x)
+    fig = plt.figure()
+    graph = fig.add_subplot(111)
+    graph.plot(dates,y)
+    conv = np.vectorize(mdates.strpdate2num('%Y%m%d'))
+    graph.axvline(conv('20140101'), color='lightgrey', zorder=0)
+    graph.axvline(conv('20150101'), color='lightgrey', zorder=0)
+    graph.xaxis.set_major_formatter(mdates.DateFormatter('%Y%m%d'))
+    graph.xaxis.set_major_locator(mdates.MonthLocator())
+    graph.xaxis.set_minor_locator(mdates.DayLocator())
+    plt.gcf().autofmt_xdate()
+
+    fig.autofmt_xdate()
+
+    plt.show()
+
+
+def ask_for_graph(drug_dict):
+    choice = raw_input("Print a graph? Type the number of the result, or just hit enter to pass. ")
+    while choice:
+        count = 0
+        for drug in drug_dict:
+            count += 1
+            if count == int(choice):
+                fill_in({drug: drug_dict[drug]})
+                draw_graph(drug_dict[drug])
+        choice = raw_input("Print a graph? Type the number of the result, or just hit enter to pass. ")
 
 
 def search_by_str():
     search = raw_input("Enter your search term: ")
     drugs = start()
     drugs = return_match(drugs, search)
-    drugs = add_FDA_info(drugs)
-    for drug in drugs:
-        Drug.printer(drugs[drug])
-        print
-    print "%i RESULTS FOUND" % len(drugs)
+    if len(drugs) > 0:
+        drugs = add_FDA_info(drugs)
+        count = 1
+        for drug in drugs:
+            print str(count) + "."
+            Drug.printer(drugs[drug])
+            print
+            count += 1
+        ask_for_graph(drugs)
+    else:
+        print "No results."
 
 
 def search_by_num():  #
@@ -300,11 +398,18 @@ def search_by_num():  #
         max_price = 100000000
     drugs = start()
     drugs = return_highest(drugs, min_percent, min_price, max_percent, max_price)
-    drugs = add_FDA_info(drugs)
-    for drug in drugs:
-        Drug.printer(drugs[drug])
+    if len(drugs) > 0:
+        drugs = add_FDA_info(drugs)
+        count = 1
         print
-    print "%i RESULTS FOUND" % len(drugs)
+        for drug in drugs:
+            print str(count) + "."
+            Drug.printer(drugs[drug])
+            print
+            count += 1
+        ask_for_graph(drugs)
+    else:
+        print "No results."
 
 
 def remove_stuff(str):  # removes non-number characters from the main() raw_inputs
@@ -323,7 +428,7 @@ def test():
 
 if __name__ == "__main__":
     print "Let's look at some drug prices."
-    print "There are ~22,000 drugs in Medicaid's database, so we need to narrow it down."
+    print "There are ~24,000 drugs in Medicaid's database, so we need to narrow it down."
     keep_going = "y"
     while keep_going == "y":
         choice = raw_input("Search by (1) drug name or (2) min/max price/%% change. ")
