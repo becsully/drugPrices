@@ -21,7 +21,7 @@ class Drug(object):
         self.name = name
         self.scientific_name = "(none listed)"
         self.id = ndc
-        self.prices = {}
+        self.prices = {} #dictionary of datestr: pricefloat
         self.unit = unit
         self.otc = otc
         self.b_or_g = b_or_g
@@ -36,8 +36,13 @@ class Drug(object):
         self.desc = ""
 
     def add_price(self, datestr, price): #datestr formatted YYYYMMDD, price formatted as str
-        self.prices[datestr] = float(price)
-        Drug.update_prices(self)
+        if price is None:
+            self.prices[datestr] = None
+        elif datestr in self.prices:
+            pass
+        else:
+            self.prices[datestr] = float(price)
+            Drug.update_prices(self)
 
     def add_vendor(self, vendor):
         self.vendor = vendor
@@ -53,6 +58,8 @@ class Drug(object):
 
     def update_prices(self):
         for date in self.prices:
+            if self.prices[date] is None:
+                pass
             if date > self.current[0]:
                 self.current = (date, self.prices[date])
             if date < self.oldest[0]:
@@ -65,7 +72,7 @@ class Drug(object):
                 self.highest = (date, highest)
         try:
             self.change = ( self.current[1] / self.oldest[1] ) - 1
-        except ZeroDivisionError:
+        except (ZeroDivisionError, TypeError):
             pass
 
     def printer(self):
@@ -246,6 +253,7 @@ def add_prices(csvtext, drug_dict):
     count = 1
     headers = ["Name","NDC", "Price", "Effective date", "Pricing Unit", "Pharmacy Type",
                "OTC or Not", "Explanation Code", "Brand or Generic"]
+    drug_list = [drug for drug in drug_dict]
     with open(csvtext+".csv", "r") as drugcsv:
         drugreader = csv.reader(drugcsv)
         for line in drugreader:
@@ -258,10 +266,13 @@ def add_prices(csvtext, drug_dict):
                 price = drug["Price"]
                 if drug["NDC"] in drug_dict:
                     Drug.add_price(drug_dict[drug["NDC"]], date, price)
+                    drug_list.remove(drug["NDC"])
                 else:
                     pass
             count += 1
         drugcsv.close()
+    for drug in drug_list:
+        Drug.add_price(drug_dict[drug], date, None)
     return drug_dict
 
 
@@ -279,7 +290,8 @@ def return_highest(drug_dict, min_percent, min_price, max_percent, max_price):
 def return_match(drug_dict, search_term):
     matches = {}
     for drug in drug_dict:
-        if search_term.upper() in (drug_dict[drug].name).upper() and drug_dict[drug].change != 0:
+        if ( ( search_term.upper() in (drug_dict[drug].name).upper())
+             or ( search_term.upper() in (drug_dict[drug].scientific_name).upper())) and (drug_dict[drug].prices > 1):
             matches[drug] = drug_dict[drug]
         else:
             pass
@@ -297,19 +309,23 @@ def start():
     return drugs
 
 
+def get_date_list():
+    return ["20131128","20131204","20131211","20131218","20131225","20140101","20140108","20140115","20140122","20140129",
+            "20140205","20140212","20140219","20140226","20140305","20140312","20140319","20140326","20140402",
+            "20140409","20140416","20140423","20140430","20140507","20140514","20140521","20140528","20140604",
+            "20140611","20140618","20140625","20140702","20140709","20140716","20140723","20140730","20140806",
+            "20140813","20140820","20140827","20140903","20140910","20140917","20140924","20141001","20141008",
+            "20141015","20141022","20141029","20141105","20141112","20141119","20141126","20141203","20141210",
+            "20141217","20141224","20141231","20150107","20150114","20150121","20150128","20150204","20150211",
+            "20150218","20150225","20150304","20150311","20150318","20150325","20150401","20150415","20150422",
+            "20150429","20150506","20150513","20150520","20150527","20150603","20150610","20150617","20150624",
+            "20150701","20150708","20150715","20150722","20150729","20150805","20150812","20150819","20150826",
+            "20150902","20150909","20150916","20150923","20150930","20151007","20151014","20151021","20151028",
+            "20151104","20151111"]
+
+
 def fill_in(drugs):
-    date_list = ["20131204","20131211","20131218","20131225","20140101","20140108","20140115","20140122","20140129",
-                 "20140205","20140212","20140219","20140226","20140305","20140312","20140319","20140326","20140402",
-                 "20140409","20140416","20140423","20140430","20140507","20140514","20140521","20140528","20140604",
-                 "20140611","20140618","20140625","20140702","20140709","20140716","20140723","20140730","20140806",
-                 "20140813","20140820","20140827","20140903","20140910","20140917","20140924","20141001","20141008",
-                 "20141015","20141022","20141029","20141105","20141112","20141119","20141126","20141203","20141210",
-                 "20141217","20141224","20141231","20150107","20150114","20150121","20150128","20150204","20150211",
-                 "20150218","20150225","20150304","20150311","20150318","20150325","20150401","20150415","20150422",
-                 "20150429","20150506","20150513","20150520","20150527","20150603","20150610","20150617","20150624",
-                 "20150701","20150708","20150715","20150722","20150729","20150805","20150812","20150819","20150826",
-                 "20150902","20150909","20150916","20150923","20150930","20151007","20151014","20151021","20151028",
-                 "20151104","20151111"]
+    date_list = get_date_list()
     for date in date_list:
         print ".",
         drugs = add_prices("nadac/NADAC " + date, drugs)
@@ -317,19 +333,43 @@ def fill_in(drugs):
     return drugs
 
 
-def draw_graph(drugs):
+def draw_graph(drug_dict):
+    colors = [(114/255, 158/255, 206/255), (255/255, 158/255, 74/255), (103/255, 191/255, 92/255),
+              (237/255, 102/255, 93/255), (173/255, 139/255, 201/255), (168/255, 120/255, 110/255),
+              (237/255, 151/255, 202/255), (162/255, 162/255, 162/255), (205/255, 204/255, 93/255),
+              (109/255, 204/255, 218/255)]
+    xlist = get_date_list()
     x = []
-    y = []
-    for k in sorted(drugs.prices):
-        date = datetime.datetime.strptime(k,"%Y%m%d")
+    for date in xlist:
+        date = datetime.datetime.strptime(date,"%Y%m%d")
         x.append(date)
-        y.append(drugs.prices[k])
-    print x
-    print y
+    y_dict = {}
+    for drug in drug_dict:
+        drug_name = drug_dict[drug].name
+        y_dict[drug_name] = []
+        for k in sorted(drug_dict[drug].prices):
+            y_dict[drug_name].append(drug_dict[drug].prices[k])
+            #if date not in x:
+            #    x.append(date)
+    #print x
+    #print y
     dates = mdates.date2num(x)
     fig = plt.figure()
     graph = fig.add_subplot(111)
-    graph.plot(dates,y)
+    count = 0
+    for y in y_dict:
+        graph.plot(dates, y_dict[y], lw=2.5, color=colors[count], label=y)
+        first = None
+        for price in y_dict[y]:
+            first = price
+            if first is not None:
+                break
+        plt.annotate('$%0.2f' % first, xy=(0.1, first), xytext=(0, 0),
+             xycoords=('axes fraction', 'data'), textcoords='offset points', color=colors[count])
+        plt.annotate('$%0.2f' % y_dict[y][-1], xy=(.9, y_dict[y][-1]), xytext=(1, 0),
+             xycoords=('axes fraction', 'data'), textcoords='offset points', color=colors[count])
+        count += 1
+    leg = graph.legend(loc=2)
     conv = np.vectorize(mdates.strpdate2num('%Y%m%d'))
     graph.axvline(conv('20140101'), color='lightgrey', zorder=0)
     graph.axvline(conv('20150101'), color='lightgrey', zorder=0)
@@ -340,19 +380,28 @@ def draw_graph(drugs):
 
     fig.autofmt_xdate()
 
+    for color, text in zip(colors,leg.get_texts()):
+        text.set_color(color)
+
     plt.show()
 
 
 def ask_for_graph(drug_dict):
     choice = raw_input("Print a graph? Type the number of the result, or just hit enter to pass. ")
     while choice:
+        chosen_drugs = {}
         count = 0
+        choices = choice.split(",")
+        int_choices = []
+        for choice in choices:
+            int_choices.append(int(choice.replace(" ", "")))
         for drug in drug_dict:
             count += 1
-            if count == int(choice):
-                fill_in({drug: drug_dict[drug]})
-                draw_graph(drug_dict[drug])
-        choice = raw_input("Print a graph? Type the number of the result, or just hit enter to pass. ")
+            if count in int_choices:
+                chosen_drugs[drug] = drug_dict[drug]
+        fill_in(chosen_drugs)
+        draw_graph(chosen_drugs)
+        choice = raw_input("PRINT A GRAPH? Type the result number (or numbers, separated by comma), or hit enter to skip. ")
 
 
 def search_by_str():
