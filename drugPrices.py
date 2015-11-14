@@ -333,6 +333,19 @@ def fill_in(drugs):
     return drugs
 
 
+def get_first_last(price_list):
+    #first, last = None
+    for price in price_list:
+        first = price
+        if first is not None:
+            break
+    for price in reversed(price_list):
+        last = price
+        if last is not None:
+            break
+    return first, last
+
+
 def draw_graph(drug_dict):
     colors = [(114/255, 158/255, 206/255), (255/255, 158/255, 74/255), (103/255, 191/255, 92/255),
               (237/255, 102/255, 93/255), (173/255, 139/255, 201/255), (168/255, 120/255, 110/255),
@@ -359,14 +372,10 @@ def draw_graph(drug_dict):
     count = 0
     for y in y_dict:
         graph.plot(dates, y_dict[y], lw=2.5, color=colors[count], label=y)
-        first = None
-        for price in y_dict[y]:
-            first = price
-            if first is not None:
-                break
+        first, last = get_first_last(y_dict[y])
         plt.annotate('$%0.2f' % first, xy=(0.1, first), xytext=(0, 0),
              xycoords=('axes fraction', 'data'), textcoords='offset points', color=colors[count])
-        plt.annotate('$%0.2f' % y_dict[y][-1], xy=(.9, y_dict[y][-1]), xytext=(1, 0),
+        plt.annotate('$%0.2f' % last, xy=(.9, last), xytext=(1, 0),
              xycoords=('axes fraction', 'data'), textcoords='offset points', color=colors[count])
         count += 1
     leg = graph.legend(loc=2)
