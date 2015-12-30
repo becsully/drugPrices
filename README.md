@@ -1,6 +1,8 @@
 # drugPrices
 
-Prescription drugs are getting more expensive. And it's happening much, much faster than inflation. This script looks at the average prices that pharmacies are paying to acquire the drugs we buy, and shows how those prices have changed from 2013 to today. (The data comes from the Centers for Medicare and Medicaid Services, which survey hundreds of pharmacies each week about how much they are paying for drugs.)
+Prescription drugs are getting more expensive. And it's happening much, much faster than inflation. 
+
+This script looks at the average prices that pharmacies are paying to acquire the drugs we buy, and shows how those prices have changed from 2013 to today. (The data comes from the Centers for Medicare and Medicaid Services, which survey hundreds of pharmacies each week about how much they are paying for drugs.)
 
 Right now, the script requires Python 2.7 and two common modules that are not included in a basic Python install: *numpy* and *matplotlib*. Installing via Anaconda will include them. 
 
