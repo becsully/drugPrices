@@ -1,21 +1,15 @@
 from __future__ import division
 import csv
 import datetime
-from pprint import pprint
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
-from matplotlib.font_manager import FontProperties
 
 
 class Drug(object):
 
-    """
-
-
-
-    """
-
+    # A Drug object collects all of its properties as recorded by the NADAC and FDA.
+    # contains methods for adding/updating prices and printing itself when it is a search result.
 
     def __init__(self, name, ndc, unit, otc, b_or_g, source):
         self.name = name
@@ -57,6 +51,7 @@ class Drug(object):
         self.package = package
 
     def update_prices(self):
+        # checks to see if new prices being added are the highest/lowest/oldest/newest/etc.
         for date in self.prices:
             if self.prices[date] is None:
                 pass
@@ -76,6 +71,7 @@ class Drug(object):
             pass
 
     def printer(self):
+        # print formatter for search results.
         print "Proprietary name: " + self.name
         print "Scientific name: " + self.scientific_name
         print "NDC: " + self.id
@@ -96,11 +92,12 @@ class Drug(object):
         else:
             print "Highest Price: $%.2f" % float(self.highest[1])
         print "Change by percent: %.2f%%" % (self.change * 100)
-        #print "Prices: ",
-        #pprint(self.prices)
 
 
-def builder(csvtext): #csvtext is a str filename
+def builder(csvtext):
+    # The function that takes a given CSV filename/date and creates a dictionary of drugs.
+    # Their key is the drug NDC, and their value is the Drug object.
+
     date = csvtext[-8:]
     drug_dict = {}
     count = 1
@@ -124,11 +121,12 @@ def builder(csvtext): #csvtext is a str filename
     return drug_dict
 
 
-def multiple_results(drugFDA, choices_list):    # FOR TESTING
-                                                # sometimes the simple "if 8-digit-NDC in 11-digit-NDC" search
-                                                # returns more than one result. this function prints out the results.
-                                                # drugFDA is the dict with FDA info
-                                                # choices_list is a list of Drug objects that potentially match
+def multiple_results(drugFDA, choices_list):
+    # FOR TESTING
+    # sometimes the simple "if 8-digit-NDC in 11-digit-NDC" search
+    # returns more than one result. this function prints out the results.
+    # drugFDA is the dict with FDA info
+    # choices_list is a list of Drug objects that potentially match
     findings = []
     nameFDA = (drugFDA["PROPRIETARYNAME"].split(" "))[0]
     for choice in choices_list:
@@ -137,7 +135,11 @@ def multiple_results(drugFDA, choices_list):    # FOR TESTING
     return findings
 
 
-def add_FDA_info(drug_dict):     # this function supplies drug and vendor names via NDCs from the FDA's official database
+def add_FDA_info(drug_dict):
+
+    # this function supplies drug and vendor names via NDCs from the FDA's official database.
+    # sadly the FDA and NADAC have a slightly different format for NDCs, so it's not perfect.
+    # It is very unlikely to assign an incorrect NDC -- rather, it will pass on drugs it cannot find a match for.
 
     name_file = "FDANDCs.csv"
     headers = ["PRODUCTID", "PRODUCTNDC", "PRODUCTTYPENAME", "PROPRIETARYNAME", "PROPRIETARYNAMESUFFIX",
@@ -180,48 +182,16 @@ def add_FDA_info(drug_dict):     # this function supplies drug and vendor names 
                             # BECAUSE THE FDA NDCS ARE ONLY EIGHT DIGITS LONG, THIS SEARCH OFTEN RETURNS 2+ RESULTS.
                             # TODO: write a function to check other info to figure out which is the correct one.
                             # or, worst-case scenario, prompt user to choose which looks right, maybe?
-                #for finding in findings:
-                #    results[drug["NDC"]] = finding
             count += 1
-    """print str(len(results)) + " results found...."
-    print
-    for result in sorted(results):
-        print "Search ID " + result
-        Drug.printer(results[result])
-        print"""
-    return drug_dict
 
-
-def consult_va(csvtext, drug_dict):
-    count = 1
-    date = csvtext[-8:]
-    headers = ["Contract Number","Vendor","Start Date","Stop Date","NDC","SubItemIdentifier","PackageDesc",
-               "Generic Name","TradeName","VAClass","Covered", "Prime Vendor","Price","PriceStart","PriceType"]
-    with open(csvtext+".csv", "r") as drugcsv:
-        drugreader = csv.reader(drugcsv)
-        for line in drugreader:
-            if count == 1:
-                pass
-            else:
-                drug = {}
-                for i in range(len(headers)):
-                    if headers[i] == "NDC":
-                        drug["NDC"] = line[i].translate(None,"-")
-                    else:
-                        drug[headers[i]] = line[i]
-                if drug["NDC"] in drug_dict:
-                    Drug.add_vendor(drug_dict[drug["NDC"]], drug["Vendor"])
-                else:
-                    this_drug = Drug(drug["TradeName"], drug["NDC"], drug["PackageDesc"],
-                                     "(Not listed)", "(Not Listed)", "VA")
-                    Drug.add_price(this_drug, date, drug["Price"])
-                    drug_dict[drug["NDC"]] = this_drug
-            count += 1
-        drugcsv.close()
     return drug_dict
 
 
 def update(csvtext, drug_dict):
+
+    # accesses a one-date CSV file (date given as str csvtext) and adds prices for drugs in the given drug dictionary.
+    # if a drug is not in the drug dict, this function adds the drug and its info to the dictionary.
+
     date = csvtext[-8:]
     count = 1
     headers = ["Name","NDC", "Price", "Effective date", "Pricing Unit", "Pharmacy Type",
@@ -249,6 +219,9 @@ def update(csvtext, drug_dict):
 
 
 def add_prices(csvtext, drug_dict):
+    # adds prices from a CSV file (the date is the str csvtext arg) to each drug in a given drug dictionary.
+    # for drugs in the dictionary but not in the file, the function adds None as the price.
+    # this function passes on drugs in the CSV but not in the drug_dict.
     date = csvtext[-8:]
     count = 1
     headers = ["Name","NDC", "Price", "Effective date", "Pricing Unit", "Pharmacy Type",
@@ -299,10 +272,12 @@ def return_match(drug_dict, search_term):
 
 
 def start():
-    latest = "nadac/NADAC 20151111"
+    # to initialize the price change search, it's much quicker to add prices for just three dates
+    # than for every date in the list. once the search has narrowed the list of results, the fill_in() function
+    # fills in the date/price info for the dates in the middle.
+    latest = "nadac/NADAC 20151223"
     middle = "nadac/NADAC 20141119"
     earliest = "nadac/NADAC 20131128"
-    #va_text = "fssPharmPrices20151001"
     drugs = builder(earliest)
     drugs = update(middle, drugs)
     drugs = update(latest, drugs)
@@ -310,21 +285,27 @@ def start():
 
 
 def get_date_list():
-    return ["20131128","20131204","20131211","20131218","20131225","20140101","20140108","20140115","20140122","20140129",
-            "20140205","20140212","20140219","20140226","20140305","20140312","20140319","20140326","20140402",
-            "20140409","20140416","20140423","20140430","20140507","20140514","20140521","20140528","20140604",
-            "20140611","20140618","20140625","20140702","20140709","20140716","20140723","20140730","20140806",
-            "20140813","20140820","20140827","20140903","20140910","20140917","20140924","20141001","20141008",
-            "20141015","20141022","20141029","20141105","20141112","20141119","20141126","20141203","20141210",
-            "20141217","20141224","20141231","20150107","20150114","20150121","20150128","20150204","20150211",
-            "20150218","20150225","20150304","20150311","20150318","20150325","20150401","20150415","20150422",
-            "20150429","20150506","20150513","20150520","20150527","20150603","20150610","20150617","20150624",
-            "20150701","20150708","20150715","20150722","20150729","20150805","20150812","20150819","20150826",
-            "20150902","20150909","20150916","20150923","20150930","20151007","20151014","20151021","20151028",
-            "20151104","20151111"]
+    # Each week, the NADAC publishes to this URL:
+    # https://www.medicaid.gov/medicaid-chip-program-information/by-topics/benefits/prescription-drugs/pharmacy-pricing.html
+    # I haven't yet automated the downloading/unzipping/xls->csv conversion process yet.
+    # For now, this datelist must be manually updated when I add new CSVs to the folder.
+    return ["20131128","20131204","20131211","20131218","20131225","20140101","20140108","20140115","20140122",
+            "20140129","20140205","20140212","20140219","20140226","20140305","20140312","20140319","20140326",
+            "20140402","20140409","20140416","20140423","20140430","20140507","20140514","20140521","20140528",
+            "20140604","20140611","20140618","20140625","20140702","20140709","20140716","20140723","20140730",
+            "20140806","20140813","20140820","20140827","20140903","20140910","20140917","20140924","20141001",
+            "20141008","20141015","20141022","20141029","20141105","20141112","20141119","20141126","20141203",
+            "20141210","20141217","20141224","20141231","20150107","20150114","20150121","20150128","20150204",
+            "20150211","20150218","20150225","20150304","20150311","20150318","20150325","20150401","20150415",
+            "20150422","20150429","20150506","20150513","20150520","20150527","20150603","20150610","20150617",
+            "20150624","20150701","20150708","20150715","20150722","20150729","20150805","20150812","20150819",
+            "20150826","20150902","20150909","20150916","20150923","20150930","20151007","20151014","20151021",
+            "20151028","20151104","20151111","20151118","20151125","20151202","20151209","20151216","20151223"]
 
 
 def fill_in(drugs):
+    # this function fills in every date in the date list with the corresponding price.
+    # it speeds things up to do this after the search has narrowed the results instead of doing it for all 20,000+ drugs
     date_list = get_date_list()
     for date in date_list:
         print ".",
@@ -334,7 +315,8 @@ def fill_in(drugs):
 
 
 def get_first_last(price_list):
-    #first, last = None
+    # this function returns the first and last date with a non-None price
+    # this allows the draw_graph() function to add price info at the beginning and end of the lines
     for price in price_list:
         first = price
         if first is not None:
@@ -362,10 +344,7 @@ def draw_graph(drug_dict):
         y_dict[drug_name] = []
         for k in sorted(drug_dict[drug].prices):
             y_dict[drug_name].append(drug_dict[drug].prices[k])
-            #if date not in x:
-            #    x.append(date)
-    #print x
-    #print y
+
     dates = mdates.date2num(x)
     fig = plt.figure()
     graph = fig.add_subplot(111)
@@ -382,6 +361,7 @@ def draw_graph(drug_dict):
     conv = np.vectorize(mdates.strpdate2num('%Y%m%d'))
     graph.axvline(conv('20140101'), color='lightgrey', zorder=0)
     graph.axvline(conv('20150101'), color='lightgrey', zorder=0)
+    graph.axvline(conv('20160101'), color='lightgrey', zorder=0)
     graph.xaxis.set_major_formatter(mdates.DateFormatter('%Y%m%d'))
     graph.xaxis.set_major_locator(mdates.MonthLocator())
     graph.xaxis.set_minor_locator(mdates.DayLocator())
@@ -430,7 +410,7 @@ def search_by_str():
         print "No results."
 
 
-def search_by_num():  #
+def search_by_num():
     print "Enter minimum and maximum current price and percent increase in two years."
     print "You can just hit enter if you don't want a minimum or maximum."
     raw_min_price = raw_input("MINIMUM CURRENT PRICE: ")
@@ -470,7 +450,8 @@ def search_by_num():  #
         print "No results."
 
 
-def remove_stuff(str):  # removes non-number characters from the main() raw_inputs
+def remove_stuff(str):
+    # removes non-number characters from the menu() raw_inputs
     numstr = ""
     for character in str:
         if character.isdigit() or character == "." or character == "-":
@@ -484,7 +465,7 @@ def test():
     drugs = start()
 
 
-if __name__ == "__main__":
+def menu():
     print "Let's look at some drug prices."
     print "There are ~24,000 drugs in Medicaid's database, so we need to narrow it down."
     keep_going = "y"
@@ -501,3 +482,7 @@ if __name__ == "__main__":
         print
         keep_going = (raw_input("RUN ANOTHER SEARCH? Y/N ")).lower()
         print
+
+
+if __name__ == "__main__":
+    menu()
