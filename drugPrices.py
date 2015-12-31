@@ -4,6 +4,13 @@ import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
+import requests
+from glob import glob
+import zipfile
+import StringIO
+import xlrd
+import shutil
+import os
 
 
 class Drug(object):
@@ -284,23 +291,38 @@ def start():
     return drugs
 
 
+def get_file():
+    if os.path.exists('temp'):
+        shutil.rmtree('temp')
+    os.makedirs('temp')
+    base_url = "http://www.medicaid.gov/Medicaid-CHIP-Program-Information/By-Topics/Benefits/Prescription-Drugs/Downloads/NADAC/"
+    base_end = "-NADAC-Files.zip"
+    now = datetime.datetime.now()
+    date_str = now.strftime("%Y-%B")
+    full_url = base_url + date_str + base_end
+    r = requests.get(full_url)
+    z = zipfile.ZipFile(StringIO.StringIO(r.content))
+    z.extractall("temp")
+
+
+def convert_to_csv():
+    for path in glob("temp/*.xl*"):
+        filename = os.path.basename(path).split(".")[0]
+        workbook = xlrd.open_workbook(path)
+        sheet = workbook.sheet_by_index(0)
+        output = open("nadac/%s.csv" % filename, "wb")
+        writer = csv.writer(output)
+        for rownum in xrange(sheet.nrows):
+            writer.writerow(sheet.row_values(rownum))
+        output.close()
+
+
 def get_date_list():
-    # Each week, the NADAC publishes to this URL:
-    # https://www.medicaid.gov/medicaid-chip-program-information/by-topics/benefits/prescription-drugs/pharmacy-pricing.html
-    # I haven't yet automated the downloading/unzipping/xls->csv conversion process yet.
-    # For now, this datelist must be manually updated when I add new CSVs to the folder.
-    return ["20131128","20131204","20131211","20131218","20131225","20140101","20140108","20140115","20140122",
-            "20140129","20140205","20140212","20140219","20140226","20140305","20140312","20140319","20140326",
-            "20140402","20140409","20140416","20140423","20140430","20140507","20140514","20140521","20140528",
-            "20140604","20140611","20140618","20140625","20140702","20140709","20140716","20140723","20140730",
-            "20140806","20140813","20140820","20140827","20140903","20140910","20140917","20140924","20141001",
-            "20141008","20141015","20141022","20141029","20141105","20141112","20141119","20141126","20141203",
-            "20141210","20141217","20141224","20141231","20150107","20150114","20150121","20150128","20150204",
-            "20150211","20150218","20150225","20150304","20150311","20150318","20150325","20150401","20150415",
-            "20150422","20150429","20150506","20150513","20150520","20150527","20150603","20150610","20150617",
-            "20150624","20150701","20150708","20150715","20150722","20150729","20150805","20150812","20150819",
-            "20150826","20150902","20150909","20150916","20150923","20150930","20151007","20151014","20151021",
-            "20151028","20151104","20151111","20151118","20151125","20151202","20151209","20151216","20151223"]
+    datelist = []
+    for path in glob("nadac/NADAC *.csv"):
+        datestr = os.path.basename(path).split('.')[0].split(' ')[1]
+        datelist.append(datestr)
+    return datelist
 
 
 def fill_in(drugs):
@@ -462,7 +484,8 @@ def remove_stuff(str):
 
 
 def test():
-    drugs = start()
+    get_file()
+    convert_to_csv()
 
 
 def menu():
