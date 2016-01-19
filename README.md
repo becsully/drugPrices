@@ -8,7 +8,7 @@ This repo contains a pair of similar scripts whichallow you to search by a drug'
 
 Download the repo and run **drugPrices-light.py** to receive text results only. The light version needs only Python 2.7 to run. 
 
-To graph your results, run **drugPrices-graphy.py**. You'll need *numpy* and *matplotlib*. The graphs aren't pretty yet, but they're a useful visual tool to help spot patterns and important dates. 
+To graph your results, run **drugPrices-graph.py**. You'll need *numpy* and *matplotlib*. The graphs aren't pretty yet, but they're a useful visual tool to help spot patterns and important dates. 
 
 Sample output: 
 
