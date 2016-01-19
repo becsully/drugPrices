@@ -1,7 +1,5 @@
 import csv
-
 from drug import Drug, get_date_list, builder, update, multiple_results
-
 
 
 def new_fda(drug_dict):
@@ -73,46 +71,6 @@ def create_list():
         update(files[i+1], drugs)
         print "done with %s" % files[i+1]
     return new_fda(drugs)
-
-
-def make_dict(drug):
-    dd = {}
-    dd["Name"] = drug.name
-    dd["Scientific Name"] = drug.scientific_name
-    dd["FDA ID"] = drug.id
-    dd["Unit Description"] = drug.unit
-    dd["OTC?"] = drug.otc
-    dd["Brand/Generic"] = drug.b_or_g
-    dd["Vendor"] = drug.vendor
-    dd["Package Description"] = drug.package
-    dd["Source"] = drug.source
-    for date in (get_date_list()):
-        if date in drug.prices:
-            dd[date] = drug.prices[date]
-        else:
-            dd[date] = None
-    return dd
-
-
-"""
-        self.name = name
-        self.scientific_name = "(none listed)"
-        self.id = ndc
-        self.prices = {} #dictionary of datestr: pricefloat
-        self.unit = unit
-        self.otc = otc
-        self.b_or_g = b_or_g
-        self.lowest = ("20500101", 1000000.0)
-        self.highest = ("20000101", 0.0)
-        self.current = ("19000101", 0.0)
-        self.oldest = ("20500101", 0.0)
-        self.change = 0
-        self.vendor = "(None listed)"
-        self.package = "(None listed)"
-        self.source = source
-        self.desc = ""
-"""
-
 
 
 def write(drugs):
