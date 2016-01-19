@@ -2,13 +2,13 @@
 
 Prescription drugs are getting more expensive. And it's happening much, much faster than inflation. 
 
-This script looks at the average prices that pharmacies are paying to acquire the drugs we buy, and shows how those prices have changed from 2013 to today. (The data comes from the Centers for Medicare and Medicaid Services, which survey hundreds of pharmacies each week about how much they are paying for drugs.)
+This script looks at the prices that pharmacies pay to acquire the drugs that we buy -- and it shows how those prices have changed, week by week, from 2013 to today. (The data comes from the Centers for Medicare and Medicaid Services, which survey hundreds of pharmacies every week about how much they pay for drugs.)
 
-Right now, the script requires Python 2.7 and two common modules that are not included in a basic Python install: *numpy* and *matplotlib*. Installing via Anaconda will include them. 
+This repo contains a pair of similar scripts whichallow you to search by a drug's name, or to find all drugs whose prices and price changes (by percent) fall within your given parameters. 
 
-(I plan to add a basic version of the search, which will run on any computer with Python 2.3+.)
+Download the repo and run **drugPrices-light.py** to receive text results only. The light version needs only Python 2.7 to run. 
 
-Download the repo and run drugPrices.py to search by a drug's name, or to find all drugs whose prices and price changes (by percent) fall within your given parameters. 
+To graph your results, run **drugPrices-graphy.py**. You'll need *numpy* and *matplotlib*. The graphs aren't pretty yet, but they're a useful visual tool to help spot patterns and important dates. 
 
 Sample output: 
 
