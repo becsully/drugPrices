@@ -114,12 +114,12 @@ def start():
     # to initialize the price change search, it's much quicker to add prices for just three dates
     # than for every date in the list. once the search has narrowed the list of results, the fill_in() function
     # fills in the date/price info for the dates in the middle.
-    latest = "nadac/NADAC 20160113"
-    middle = "nadac/NADAC 20141224"
-    earliest = "nadac/NADAC 20131128"
-    drugs = builder(earliest)
+    latest = "nadac/NADAC 20160120"
+    middle = "nadac/NADAC 20140625"
+    earliest = "nadac/NADAC 20121004"
+    drugs = builder(latest)
+    drugs = update(earliest, drugs)
     drugs = update(middle, drugs)
-    drugs = update(latest, drugs)
     return drugs
 
 
@@ -130,7 +130,7 @@ def builder(csvtext):
     date = csvtext[-8:]
     drug_dict = {}
     count = 1
-    headers = ["Name","NDC","Price","Effective date","Pricing Unit","Pharmacy Type","OTC or Not","Explanation Code","Brand or Generic"]
+    headers = which_headers(date)
     with open(csvtext+".csv", "r") as drugcsv:
         drugreader = csv.reader(drugcsv)
         for line in drugreader:
@@ -216,6 +216,15 @@ def add_FDA_info(drug_dict):
     return drug_dict
 
 
+def which_headers(datestr):
+    if int(datestr) > 20130214:
+        headers = ["Name", "NDC", "Price", "Effective date", "Pricing Unit", "Pharmacy Type", "OTC or Not",
+                   "Explanation Code", "Brand or Generic"]
+    else:
+        headers = ["Name", "NDC", "Price", "Pharmacy Type", "OTC or Not", "Effective date", "Explanation Code", "Update"]
+    return headers
+
+
 def update(csvtext, drug_dict):
 
     # accesses a one-date CSV file (date given as str csvtext) and adds prices for drugs in the given drug dictionary.
@@ -223,8 +232,7 @@ def update(csvtext, drug_dict):
 
     date = csvtext[-8:]
     count = 1
-    headers = ["Name","NDC", "Price", "Effective date", "Pricing Unit", "Pharmacy Type",
-               "OTC or Not", "Explanation Code", "Brand or Generic"]
+    headers = which_headers(date)
     with open(csvtext+".csv", "r") as drugcsv:
         drugreader = csv.reader(drugcsv)
         for line in drugreader:
@@ -238,6 +246,9 @@ def update(csvtext, drug_dict):
                 if drug["NDC"] in drug_dict:
                     Drug.add_price(drug_dict[drug["NDC"]], date, price)
                 else:
+                    if int(date) < 20130215:
+                        drug["Pricing Unit"] = "Unknown"
+                        drug["Brand or Generic"] = "Unknown"
                     this_drug = Drug(drug["Name"], drug["NDC"], drug["Pricing Unit"],
                                      drug["OTC or Not"], drug["Brand or Generic"], "NADAC")
                     Drug.add_price(this_drug, date, price)
@@ -253,8 +264,7 @@ def add_prices(csvtext, drug_dict):
     # this function passes on drugs in the CSV but not in the drug_dict.
     date = csvtext[-8:]
     count = 1
-    headers = ["Name","NDC", "Price", "Effective date", "Pricing Unit", "Pharmacy Type",
-               "OTC or Not", "Explanation Code", "Brand or Generic"]
+    headers = which_headers(date)
     drug_list = [drug for drug in drug_dict]
     with open(csvtext+".csv", "r") as drugcsv:
         drugreader = csv.reader(drugcsv)

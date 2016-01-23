@@ -86,6 +86,7 @@ def draw_graph(drug_dict):
         count += 1
     leg = graph.legend(loc=2)
     conv = np.vectorize(mdates.strpdate2num('%Y%m%d'))
+    graph.axvline(conv('20130101'), color='lightgrey', zorder=0)
     graph.axvline(conv('20140101'), color='lightgrey', zorder=0)
     graph.axvline(conv('20150101'), color='lightgrey', zorder=0)
     graph.axvline(conv('20160101'), color='lightgrey', zorder=0)
