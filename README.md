@@ -50,3 +50,4 @@ Print a graph? Type the number of the result, or just hit enter to pass.
 RUN ANOTHER SEARCH? Y/N n
 ```
 
+![alt text](https://github.com/becsully/drugPrices/blob/master/figure_1.png)
